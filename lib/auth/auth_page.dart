@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:tododo/auth/auth_service.dart';
 import 'package:tododo/pages/dashboard_pages.dart';
 
@@ -8,7 +9,6 @@ class AuthPage extends StatefulWidget {
   const AuthPage({super.key, required this.authService});
 
   @override
-  // ignore: library_private_types_in_public_api
   _AuthPageState createState() => _AuthPageState();
 }
 
@@ -17,8 +17,6 @@ class _AuthPageState extends State<AuthPage> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController usernameController = TextEditingController();
   bool isLogin = true;
-
-  get supabase => null;
 
   void toggleMode() {
     setState(() {
@@ -39,20 +37,24 @@ class _AuthPageState extends State<AuthPage> {
             .signUp(email: email, password: password, username: username);
       }
 
-      Navigator.pushReplacement(
-        // ignore: use_build_context_synchronously
-        context,
-        MaterialPageRoute(
+      // Setelah login, pindah ke DashboardPage
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
             builder: (context) => DashboardPage(
-                  authService: widget.authService,
-                  supabase: supabase,
-                )),
-      );
+              authService: widget.authService,
+              supabase: Supabase.instance.client,
+            ),
+          ),
+        );
+      }
     } catch (e) {
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
     }
   }
 
@@ -67,19 +69,19 @@ class _AuthPageState extends State<AuthPage> {
             if (!isLogin)
               TextField(
                 controller: usernameController,
-                decoration: InputDecoration(labelText: 'Username'),
+                decoration: const InputDecoration(labelText: 'Username'),
               ),
             TextField(
               controller: emailController,
-              decoration: InputDecoration(labelText: 'Email'),
+              decoration: const InputDecoration(labelText: 'Email'),
               keyboardType: TextInputType.emailAddress,
             ),
             TextField(
               controller: passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
+              decoration: const InputDecoration(labelText: 'Password'),
               obscureText: true,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: handleAuth,
               child: Text(isLogin ? 'Login' : 'Sign Up'),

@@ -1,51 +1,59 @@
-import 'package:uuid/uuid.dart';
-
-class Task {
+class TaskModel {
   final String id;
   final String userId;
   final String title;
   final String description;
-  final DateTime? dueDate;
+  final DateTime dueDate;
   final String priority;
   final String status;
   final DateTime createdAt;
+  final DateTime updatedAt;
 
-  Task({
-    required this.id,
+  TaskModel({
+    String? id,
     required this.userId,
     required this.title,
     required this.description,
-    this.dueDate,
+    required this.dueDate,
     required this.priority,
     required this.status,
-    required this.createdAt,
-  });
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  })  : this.id = id ?? '',
+        this.createdAt = createdAt ?? DateTime.now(),
+        this.updatedAt = updatedAt ?? DateTime.now();
 
-  // Convert Task to Map for Supabase
+  // Add factory constructor fromMap
+  factory TaskModel.fromMap(Map<String, dynamic> map) {
+    return TaskModel(
+      id: map['id']?.toString() ?? '',
+      userId: map['user_id']?.toString() ?? '',
+      title: map['title'] ?? '',
+      description: map['description'] ?? '',
+      dueDate: DateTime.parse(map['due_date']),
+      priority: map['priority'] ?? 'Normal',
+      status: map['status'] ?? 'Pending',
+      createdAt: DateTime.parse(map['created_at']),
+      updatedAt: DateTime.parse(map['updated_at']),
+    );
+  }
+
   Map<String, dynamic> toMap() {
-    return {
-      'id': id,
+    final map = {
       'user_id': userId,
       'title': title,
       'description': description,
-      'due_date': dueDate?.toIso8601String(),
+      'due_date': dueDate.toIso8601String(),
       'priority': priority,
       'status': status,
       'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
-  }
 
-  // Convert Map from Supabase to Task object
-  factory Task.fromMap(Map<String, dynamic> map) {
-    return Task(
-      id: map['id'],
-      userId: map['user_id'],
-      title: map['title'],
-      description: map['description'],
-      dueDate: map['due_date'] != null ? DateTime.parse(map['due_date']) : null,
-      priority: map['priority'],
-      status: map['status'],
-      createdAt: DateTime.parse(map['created_at']),
-    );
+    if (id.isNotEmpty) {
+      map['id'] = id;
+    }
+
+    return map;
   }
 }

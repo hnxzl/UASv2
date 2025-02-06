@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:tododo/auth/auth_service.dart';
-import 'package:tododo/widgets/task_popup.dart';
-import 'package:tododo/widgets/event_popup.dart';
-import 'package:tododo/widgets/note_popup.dart';
-import 'package:tododo/models/task_model.dart';
-import 'package:tododo/models/event_model.dart';
-import 'package:tododo/models/note_model.dart';
-import 'package:tododo/services/task_services.dart';
-import 'package:tododo/services/event_services.dart';
-import 'package:tododo/services/note_services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:tododo/auth/auth_service.dart';
+import 'package:tododo/pages/note_pages.dart';
+import 'package:tododo/pages/event_pages.dart';
+import 'package:tododo/pages/task_pages.dart';
+import 'package:tododo/pages/setting_pages.dart';
 
 class DashboardPage extends StatefulWidget {
   final AuthService authService;
@@ -23,149 +18,257 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  late TaskService taskService;
-  late EventService eventService;
-  late NoteService noteService;
-  String username = "";
-  List<Task> tasks = [];
-  List<Event> events = [];
-  List<Note> notes = [];
+  String username = "User";
+  int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    taskService = TaskService(supabase: widget.supabase);
-    eventService = EventService(supabase: widget.supabase);
-    noteService = NoteService(supabase: widget.supabase);
-    _loadUsername();
-    _loadData();
+    _loadUserData();
   }
 
-  void _loadUsername() async {
+  Future<void> _loadUserData() async {
     final fetchedUsername = await widget.authService.getUserUsername();
-    setState(() {
-      username = fetchedUsername ?? "User";
-    });
-  }
-
-  Future<void> _loadData() async {
-    final fetchedTasks = await taskService.getTasks();
-    final fetchedEvents = await eventService.getEvents();
-    final fetchedNotes = await noteService.getNotes();
-
-    setState(() {
-      tasks = fetchedTasks.map((data) => Task.fromJson(data)).toList();
-      events = fetchedEvents.map((data) => Event.fromJson(data)).toList();
-      notes = fetchedNotes.map((data) => Note.fromJson(data)).toList();
-    });
-  }
-
-  void _showAddPopup(String type) async {
-    bool? isAdded;
-    if (type == "Task") {
-      isAdded = await showDialog<bool>(
-        context: context,
-        builder: (context) => TaskPopup(supabase: Supabase.instance.client),
-      );
-    } else if (type == "Event") {
-      isAdded = await showDialog(
-        context: context,
-        builder: (context) => EventPopup(),
-      );
-    } else {
-      isAdded = await showDialog(
-        context: context,
-        builder: (context) => NotePopup(),
-      );
-    }
-
-    if (isAdded == true) {
-      _loadData();
+    if (mounted) {
+      setState(() {
+        username = fetchedUsername ?? "User";
+      });
     }
   }
 
-  void _showDescription(String title, String description) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text(description),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Close"),
-          ),
-        ],
-      ),
-    );
+  Future<List<Map<String, dynamic>>> fetchTasks() async {
+    final userId = widget.supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    final response = await widget.supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', userId)
+        .order('due_date', ascending: true);
+
+    return response;
   }
 
-  Widget _buildListItem(String title, String description) {
-    return ListTile(
-      title: Text(title),
-      onTap: () => _showDescription(title, description),
-      trailing: PopupMenuButton<String>(
-        onSelected: (value) {
-          if (value == "edit") {
-            // Handle edit
-          } else if (value == "delete") {
-            // Handle delete
-          }
-        },
-        itemBuilder: (context) => [
-          PopupMenuItem(value: "edit", child: Text("Edit")),
-          PopupMenuItem(value: "delete", child: Text("Delete")),
-        ],
-      ),
-    );
+  Future<List<Map<String, dynamic>>> fetchEvents() async {
+    final userId = widget.supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    final response = await widget.supabase
+        .from('events')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', ascending: true);
+
+    return response;
   }
 
-  Future<void> _refreshData() async {
-    await _loadData();
+  Future<List<Map<String, dynamic>>> fetchNotes() async {
+    final userId = widget.supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    final response = await widget.supabase
+        .from('notes')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+
+    return response;
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _refreshData,
+        child: IndexedStack(
+          index: _selectedIndex,
+          children: [
+            _buildDashboardView(),
+            EventsPage(),
+            NotePage(authService: widget.authService),
+            TaskPage(authService: widget.authService),
+            SettingsPage(),
+          ],
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        items: const [
+          BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard), label: "Dashboard"),
+          BottomNavigationBarItem(icon: Icon(Icons.event), label: "Events"),
+          BottomNavigationBarItem(icon: Icon(Icons.note), label: "Notes"),
+          BottomNavigationBarItem(icon: Icon(Icons.task), label: "Task"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.settings), label: "Settings"),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDashboardView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Welcome, $username",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              SizedBox(height: 20),
-              GridView.count(
-                shrinkWrap: true,
-                crossAxisCount: 3,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  ElevatedButton(
-                      onPressed: () => _showAddPopup("Task"),
-                      child: Text("Add Task")),
-                  ElevatedButton(
-                      onPressed: () => _showAddPopup("Event"),
-                      child: Text("Add Event")),
-                  ElevatedButton(
-                    onPressed: () => _showAddPopup("Note"),
-                    child: Text("Add Note"),
+                  Text("Welcome back, $username",
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold)),
+                  IconButton(
+                    icon: const Icon(Icons.notifications,
+                        color: Colors.redAccent),
+                    onPressed: () {},
                   ),
                 ],
               ),
-              Expanded(
-                child: ListView(
-                  children: [
-                    ...tasks.map((task) => _buildListItem(
-                        task.title, task.description ?? "No Description")),
-                    ...events.map((event) =>
-                        _buildListItem(event.title, event.description)),
-                    ...notes.map(
-                        (note) => _buildListItem(note.title, note.content)),
-                  ],
+              const SizedBox(height: 10),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: "Search tasks, notes & events...",
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30)),
+                  filled: true,
+                  fillColor: Colors.grey[200],
                 ),
               ),
             ],
           ),
         ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionHeader("Today's Tasks", "Your tasks"),
+                FutureBuilder(
+                  future: fetchTasks(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Text('Error: ${snapshot.error}');
+                    }
+                    final tasks = snapshot.data ?? [];
+                    return tasks.isEmpty
+                        ? const Text("No tasks available")
+                        : Column(
+                            children: tasks
+                                .map((task) => _buildTaskCard(task['title'],
+                                    "Due: ${task['due_date']}", Colors.blue))
+                                .toList(),
+                          );
+                  },
+                ),
+                const SizedBox(height: 10),
+                _buildSectionHeader("Upcoming Events", "Your events"),
+                FutureBuilder(
+                  future: fetchEvents(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Text('Error: ${snapshot.error}');
+                    }
+                    final events = snapshot.data ?? [];
+                    return events.isEmpty
+                        ? const Text("No events available")
+                        : Column(
+                            children: events
+                                .map((event) => _buildEventCard(
+                                    event['title'], "On: ${event['date']}"))
+                                .toList(),
+                          );
+                  },
+                ),
+                const SizedBox(height: 10),
+                _buildSectionHeader("Recent Notes", "Your notes"),
+                FutureBuilder(
+                  future: fetchNotes(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Text('Error: ${snapshot.error}');
+                    }
+                    final notes = snapshot.data ?? [];
+                    return notes.isEmpty
+                        ? const Text("No notes available")
+                        : Column(
+                            children: notes
+                                .map((note) => _buildNoteCard(
+                                    note['title'] ?? "Untitled",
+                                    note['content'] ?? "No content available",
+                                    "Updated ${note['created_at'] ?? "Unknown"}"))
+                                .toList(),
+                          );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(String title, String subtitle) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Text(title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _buildTaskCard(String title, String time, Color color) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: ListTile(
+        leading: Container(width: 5, height: 40, color: color),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(time, style: TextStyle(color: Colors.red.shade400)),
+      ),
+    );
+  }
+
+  Widget _buildEventCard(String title, String date) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: ListTile(
+        leading: const Icon(Icons.event, color: Colors.orange),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(date, style: const TextStyle(color: Colors.grey)),
+      ),
+    );
+  }
+
+  Widget _buildNoteCard(String title, String content, String subtitle) {
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.note, color: Colors.green),
+        title: Text(title),
+        subtitle: Text(subtitle),
       ),
     );
   }

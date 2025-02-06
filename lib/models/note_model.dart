@@ -1,35 +1,31 @@
-class Note {
+class NoteModel {
   final String id;
   final String userId;
   final String title;
   final String content;
-  final DateTime createdAt;
-  final DateTime updatedAt;
 
-  Note({
+  NoteModel({
     required this.id,
     required this.userId,
     required this.title,
     required this.content,
-    required this.createdAt,
-    required this.updatedAt,
   });
 
-  factory Note.fromJson(Map<String, dynamic> json) => Note(
-        id: json['id'],
-        userId: json['user_id'],
-        title: json['title'],
-        content: json['content'],
-        createdAt: DateTime.parse(json['created_at']),
-        updatedAt: DateTime.parse(json['updated_at']),
-      );
+  factory NoteModel.fromMap(Map<String, dynamic> map) {
+    return NoteModel(
+      id: map['id']?.toString() ?? '',
+      userId: map['user_id']?.toString() ?? '',
+      title: map['title']?.toString() ?? 'Untitled',
+      content: map['content']?.toString() ?? '',
+    );
+  }
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'user_id': userId,
-        'title': title,
-        'content': content,
-        'created_at': createdAt.toIso8601String(),
-        'updated_at': updatedAt.toIso8601String(),
-      };
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'user_id': userId,
+      'title': title,
+      'content': content,
+    };
+  }
 }
