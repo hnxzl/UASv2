@@ -6,6 +6,10 @@ import 'package:tododo/services/notification_service.dart';
 import 'auth/auth_service.dart';
 import 'auth/auth_page.dart';
 import 'pages/dashboard_pages.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

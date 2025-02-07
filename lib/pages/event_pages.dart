@@ -81,22 +81,33 @@ class _EventPageState extends State<EventPage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
           ),
         ],
       ),
     );
 
     if (confirm == true) {
-      setState(() {
-        isLoading = true;
-      });
-      // Pass the event ID instead of the whole event object
-      await eventDatabase.deleteEvent(event.id);
-      setState(() {
-        isLoading = false;
-      });
+      try {
+        setState(() => isLoading = true);
+
+        await eventDatabase.deleteEvent(event.id);
+
+        if (mounted) {
+          setState(() => isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Event deleted successfully')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete event: ${e.toString()}')),
+          );
+        }
+      }
     }
   }
 
@@ -355,10 +366,40 @@ class _EventPageState extends State<EventPage> {
                 },
                 confirmDismiss: (direction) async {
                   if (direction == DismissDirection.startToEnd) {
-                    showEventDialog(event);
-                    return false;
+                    showEventDialog(event); // Edit event
+                    return false; // Jangan hapus event saat edit
+                  } else if (direction == DismissDirection.endToStart) {
+                    final bool? confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Event'),
+                        content: const Text(
+                            'Are you sure you want to delete this event?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(
+                                context, false), // Cancel deletion
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(
+                                context, true), // Confirm deletion
+                            child: const Text('Delete'),
+                            style: TextButton.styleFrom(
+                                foregroundColor: Colors.red),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirm == true) {
+                      await deleteEvent(event);
+                      return true; // Hapus dari UI jika dikonfirmasi
+                    } else {
+                      return false; // Jangan hapus dari UI jika dibatalkan
+                    }
                   }
-                  return true;
+                  return false;
                 },
                 child: Card(
                   elevation: 2,

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:tododo/auth/auth_service.dart';
 import 'package:tododo/pages/note_pages.dart';
@@ -20,11 +22,15 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   String username = "User";
   int _selectedIndex = 0;
+  String _searchQuery = ""; // Tambahkan untuk menyimpan teks pencarian
+  final FlutterLocalNotificationsPlugin _notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _initializeNotifications();
   }
 
   Future<void> _loadUserData() async {
@@ -34,6 +40,14 @@ class _DashboardPageState extends State<DashboardPage> {
         username = fetchedUsername ?? "User";
       });
     }
+  }
+
+  Future<void> _initializeNotifications() async {
+    const AndroidInitializationSettings androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    final InitializationSettings initSettings =
+        InitializationSettings(android: androidSettings);
+    await _notificationsPlugin.initialize(initSettings);
   }
 
   Future<List<Map<String, dynamic>>> fetchTasks() async {
@@ -57,7 +71,7 @@ class _DashboardPageState extends State<DashboardPage> {
         .from('events')
         .select('*')
         .eq('user_id', userId)
-        .order('date', ascending: true);
+        .order('event_date', ascending: true);
 
     return response;
   }
@@ -70,7 +84,7 @@ class _DashboardPageState extends State<DashboardPage> {
         .from('notes')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: true);
 
     return response;
   }
@@ -93,7 +107,7 @@ class _DashboardPageState extends State<DashboardPage> {
             EventPage(authService: widget.authService),
             NotePage(authService: widget.authService),
             TaskPage(authService: widget.authService),
-            SettingsPage(),
+            SettingsPage(authService: widget.authService),
           ],
         ),
       ),
@@ -116,6 +130,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  @override
   Widget _buildDashboardView() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,6 +163,11 @@ class _DashboardPageState extends State<DashboardPage> {
                   filled: true,
                   fillColor: Colors.grey[200],
                 ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.toLowerCase(); // Update search query
+                  });
+                },
               ),
             ],
           ),
@@ -169,12 +189,19 @@ class _DashboardPageState extends State<DashboardPage> {
                       return Text('Error: ${snapshot.error}');
                     }
                     final tasks = snapshot.data ?? [];
-                    return tasks.isEmpty
+                    final filteredTasks = tasks
+                        .where((task) =>
+                            task['title'].toLowerCase().contains(_searchQuery))
+                        .toList();
+
+                    return filteredTasks.isEmpty
                         ? const Text("No tasks available")
                         : Column(
-                            children: tasks
-                                .map((task) => _buildTaskCard(task['title'],
-                                    "Due: ${task['due_date']}", Colors.blue))
+                            children: filteredTasks
+                                .map((task) => _buildTaskCard(
+                                    task['title'],
+                                    "Due: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(task['due_date']))}",
+                                    Colors.blue))
                                 .toList(),
                           );
                   },
@@ -191,12 +218,17 @@ class _DashboardPageState extends State<DashboardPage> {
                       return Text('Error: ${snapshot.error}');
                     }
                     final events = snapshot.data ?? [];
-                    return events.isEmpty
+                    final filteredEvents = events
+                        .where((event) =>
+                            event['title'].toLowerCase().contains(_searchQuery))
+                        .toList();
+
+                    return filteredEvents.isEmpty
                         ? const Text("No events available")
                         : Column(
-                            children: events
+                            children: filteredEvents
                                 .map((event) => _buildEventCard(event['title'],
-                                    "On: ${event['event_date']}"))
+                                    "On: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(event['event_date']))}"))
                                 .toList(),
                           );
                   },
@@ -213,14 +245,23 @@ class _DashboardPageState extends State<DashboardPage> {
                       return Text('Error: ${snapshot.error}');
                     }
                     final notes = snapshot.data ?? [];
-                    return notes.isEmpty
+                    final filteredNotes = notes
+                        .where((note) =>
+                            note['title']
+                                .toLowerCase()
+                                .contains(_searchQuery) ||
+                            note['content']
+                                .toLowerCase()
+                                .contains(_searchQuery))
+                        .toList();
+
+                    return filteredNotes.isEmpty
                         ? const Text("No notes available")
                         : Column(
-                            children: notes
+                            children: filteredNotes
                                 .map((note) => _buildNoteCard(
                                     note['title'] ?? "Untitled",
-                                    note['content'] ?? "No content available",
-                                    "Updated ${note['created_at'] ?? "Unknown"}"))
+                                    note['content'] ?? "No content available"))
                                 .toList(),
                           );
                   },
@@ -252,6 +293,15 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  Widget _buildNoteCard(String title, String content) {
+    return Card(
+      child: ListTile(
+        title: Text(title),
+        subtitle: Text(content),
+      ),
+    );
+  }
+
   Widget _buildEventCard(String title, String date) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -259,16 +309,6 @@ class _DashboardPageState extends State<DashboardPage> {
         leading: const Icon(Icons.event, color: Colors.orange),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(date, style: const TextStyle(color: Colors.grey)),
-      ),
-    );
-  }
-
-  Widget _buildNoteCard(String title, String content, String subtitle) {
-    return Card(
-      child: ListTile(
-        leading: const Icon(Icons.note, color: Colors.green),
-        title: Text(title),
-        subtitle: Text(subtitle),
       ),
     );
   }

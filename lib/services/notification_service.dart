@@ -33,7 +33,7 @@ class NotificationService {
     final tz.TZDateTime scheduledTZ =
         tz.TZDateTime.from(scheduledTime, tz.local);
 
-    print("📅 Scheduling notification at: $scheduledTZ"); // 🔍 Debug log
+    print("📅 Scheduling notification at: $scheduledTZ");
 
     await _notificationsPlugin.zonedSchedule(
       id,
@@ -53,5 +53,13 @@ class NotificationService {
           UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.dateAndTime,
     );
+
+    // 🔍 Cek apakah notifikasi benar-benar masuk ke daftar yang dijadwalkan
+    final pendingNotifications =
+        await _notificationsPlugin.pendingNotificationRequests();
+    print("📌 Pending Notifications: ${pendingNotifications.length}");
+    for (var notif in pendingNotifications) {
+      print("🔔 ID: ${notif.id}, Title: ${notif.title}, Body: ${notif.body}");
+    }
   }
 }

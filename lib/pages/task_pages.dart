@@ -91,24 +91,43 @@ class _TaskPageState extends State<TaskPage> {
       setState(() {
         isLoading = true;
       });
+
       await taskDatabase.deleteTask(task);
-      setState(() {
-        isLoading = false;
-      });
+
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
-  Future<void> selectDueDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
+  void selectDueDate(
+      BuildContext context, Function(DateTime) onSelected) async {
+    final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: dueDate ?? DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime(2101),
     );
-    if (picked != null && mounted) {
-      setState(() {
-        dueDate = picked;
-      });
+
+    if (pickedDate != null) {
+      final TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      );
+
+      if (pickedTime != null) {
+        final DateTime selectedDateTime = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
+
+        onSelected(selectedDateTime);
+      }
     }
   }
 
@@ -215,25 +234,45 @@ class _TaskPageState extends State<TaskPage> {
                     ),
                     const SizedBox(height: 8),
                     ListTile(
-                      title: const Text("Due Date"),
+                      title: const Text("Due Date & Time"),
                       subtitle: Text(
                         dueDate == null
-                            ? "Select a date"
-                            : DateFormat('yyyy-MM-dd').format(dueDate!),
+                            ? "Select date and time"
+                            : DateFormat('yyyy-MM-dd HH:mm').format(dueDate!),
                       ),
                       onTap: isLoading
                           ? null
                           : () async {
-                              final DateTime? picked = await showDatePicker(
+                              // Pilih tanggal
+                              final DateTime? pickedDate = await showDatePicker(
                                 context: context,
                                 initialDate: dueDate ?? DateTime.now(),
                                 firstDate: DateTime.now(),
                                 lastDate: DateTime(2101),
                               );
-                              if (picked != null) {
-                                setDialogState(() {
-                                  dueDate = picked;
-                                });
+
+                              if (pickedDate != null) {
+                                // Pilih waktu setelah memilih tanggal
+                                final TimeOfDay? pickedTime =
+                                    await showTimePicker(
+                                  context: context,
+                                  initialTime: TimeOfDay.now(),
+                                );
+
+                                if (pickedTime != null) {
+                                  // Gabungkan tanggal dan waktu
+                                  final DateTime combinedDateTime = DateTime(
+                                    pickedDate.year,
+                                    pickedDate.month,
+                                    pickedDate.day,
+                                    pickedTime.hour,
+                                    pickedTime.minute,
+                                  );
+
+                                  setDialogState(() {
+                                    dueDate = combinedDateTime;
+                                  });
+                                }
                               }
                             },
                     ),
@@ -373,6 +412,7 @@ class _TaskPageState extends State<TaskPage> {
                 onDismissed: (direction) async {
                   if (direction == DismissDirection.endToStart) {
                     await deleteTask(task);
+                    setState(() {}); // Perbarui tampilan setelah menghapus
                   }
                 },
                 confirmDismiss: (direction) async {
