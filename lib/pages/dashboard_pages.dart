@@ -90,7 +90,7 @@ class _DashboardPageState extends State<DashboardPage> {
           index: _selectedIndex,
           children: [
             _buildDashboardView(),
-            EventsPage(),
+            EventPage(authService: widget.authService),
             NotePage(authService: widget.authService),
             TaskPage(authService: widget.authService),
             SettingsPage(),
