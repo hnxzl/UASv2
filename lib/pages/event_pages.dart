@@ -117,10 +117,7 @@ class _EventPageState extends State<EventPage> {
   }
 
   Future<void> scheduleEventNotification(EventModel event) async {
-    // Implement notification scheduling here
-    // You'll need to use a notification package like flutter_local_notifications
-    // Schedule notification for the event date that includes the location
-    // When notification is tapped, it should open the map
+    //nanti
   }
 
   Future<void> selectEventDate(BuildContext context) async {

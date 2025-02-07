@@ -195,8 +195,8 @@ class _DashboardPageState extends State<DashboardPage> {
                         ? const Text("No events available")
                         : Column(
                             children: events
-                                .map((event) => _buildEventCard(
-                                    event['title'], "On: ${event['date']}"))
+                                .map((event) => _buildEventCard(event['title'],
+                                    "On: ${event['event_date']}"))
                                 .toList(),
                           );
                   },

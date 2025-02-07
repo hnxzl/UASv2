@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/event_model.dart';
+import 'notification_service.dart';
 
 class EventDatabase {
   final SupabaseClient supabase;
@@ -17,7 +18,20 @@ class EventDatabase {
   }
 
   Future<void> createEvent(EventModel event) async {
-    await supabase.from('events').insert(event.toMap());
+    try {
+      await supabase.from('events').insert(event.toMap());
+
+      // 🔔 Jadwalkan notifikasi
+      await NotificationService.scheduleNotification(
+        event.id.hashCode, // ID unik
+        "Upcoming Event: ${event.title}",
+        "Event on ${event.eventDate}",
+        event.eventDate,
+      );
+    } catch (e) {
+      print('Error in createEvent: $e');
+      throw Exception('Failed to create event: $e');
+    }
   }
 
   Future<void> updateEvent(EventModel event) async {

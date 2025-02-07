@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/task_model.dart';
+import 'notification_service.dart';
 
 class TaskDatabase {
   final SupabaseClient supabase;
@@ -26,6 +27,14 @@ class TaskDatabase {
           .single();
 
       print('Task created with ID: ${response['id']}');
+
+      // 🔔 Jadwalkan notifikasi
+      await NotificationService.scheduleNotification(
+        response['id'].hashCode, // ID unik
+        "Reminder: ${task.title}",
+        "Due at ${task.dueDate}",
+        task.dueDate,
+      );
     } catch (e) {
       print('Error in createTask: $e');
       throw Exception('Failed to create task: $e');
