@@ -313,11 +313,11 @@ class _TaskPageState extends State<TaskPage> {
   Color _getPriorityColor(String priority) {
     switch (priority) {
       case 'High':
-        return Colors.red.shade100;
+        return const Color.fromARGB(255, 204, 77, 89);
       case 'Low':
-        return Colors.green.shade100;
+        return const Color.fromARGB(255, 138, 255, 142);
       default:
-        return Colors.blue.shade50;
+        return const Color.fromARGB(255, 123, 193, 243);
     }
   }
 
