@@ -8,6 +8,7 @@ import 'package:tododo/pages/event_pages.dart';
 import 'package:tododo/pages/task_pages.dart';
 import 'package:tododo/pages/setting_pages.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DashboardPage extends StatefulWidget {
   final AuthService authService;
@@ -55,7 +56,7 @@ class _DashboardPageState extends State<DashboardPage> {
       case 'low':
         return Colors.green;
       default:
-        return Colors.blueGrey;
+        return Colors.blue;
     }
   }
 
@@ -127,6 +128,22 @@ class _DashboardPageState extends State<DashboardPage> {
     });
   }
 
+  Future<void> openLocationInMaps(String location) async {
+    final encodedLocation = Uri.encodeComponent(location);
+    final url =
+        'https://www.google.com/maps/search/?api=1&query=$encodedLocation';
+
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open maps')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = isDarkMode ? ThemeData.dark() : ThemeData.light();
@@ -138,7 +155,7 @@ class _DashboardPageState extends State<DashboardPage> {
             secondary: Color(0xFFFFC8DD)), // Warna pink untuk secondary color
       ),
       child: Scaffold(
-        backgroundColor: theme.scaffoldBackgroundColor,
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         body: SafeArea(
           child: IndexedStack(
             index: _selectedIndex,
@@ -154,9 +171,11 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
         bottomNavigationBar: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
-          selectedItemColor:
-              Color(0xFF5FB2FF), // Warna biru untuk item terpilih
-          unselectedItemColor: const Color.fromARGB(255, 131, 129, 129),
+          backgroundColor: Color(0xFF5FB2FF), // Warna biru untuk navbar
+          selectedItemColor: const Color.fromARGB(
+              255, 255, 255, 255), // Warna putih untuk item terpilih
+          unselectedItemColor:
+              Colors.white, // Abu-abu untuk item tidak terpilih
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
           items: const [
@@ -184,7 +203,6 @@ class _DashboardPageState extends State<DashboardPage> {
             children: [
               _buildHeader(),
               const SizedBox(height: 12),
-              _buildSearchBar(),
             ],
           ),
         ),
@@ -208,146 +226,212 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: Color(0xFF5FB2FF), // Warna biru untuk header
-              child: Text(
-                username[0].toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Welcome back,",
-                  style: TextStyle(fontSize: 14, color: Colors.grey),
-                ),
-                Text(
-                  username,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        IconButton(
-          icon: const Icon(Icons.notifications_none,
-              size: 28, color: Colors.redAccent),
-          onPressed: () => _showNotifications(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSearchBar() {
     return Container(
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[800] : Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF5F49FF), Color(0xFF5FB2FF)], // Gradient ungu biru
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: Colors.white.withOpacity(0.3),
+                    child: Text(
+                      username[0].toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Welcome back,",
+                        style: TextStyle(fontSize: 14, color: Colors.white70),
+                      ),
+                      Text(
+                        username,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_none,
+                        size: 28, color: Colors.white),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text("Fitur belum tersedia saat ini")),
+                      );
+                    },
+                  ),
+                  Positioned(
+                    right: 10,
+                    top: 10,
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          // Search Bar langsung di dalam header
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: TextField(
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: "Search tasks, notes & events...",
+                hintStyle: const TextStyle(color: Colors.white70),
+                prefixIcon: const Icon(Icons.search, color: Colors.white),
+                border: InputBorder.none,
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value.toLowerCase();
+                });
+              },
+            ),
           ),
         ],
       ),
-      child: TextField(
-        decoration: InputDecoration(
-          hintText: "Search tasks, notes & events...",
-          prefixIcon: const Icon(Icons.search,
-              color: Color(0xFF5FB2FF)), // Warna biru untuk ikon
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
-        ),
-        onChanged: (value) {
-          setState(() {
-            _searchQuery = value.toLowerCase();
-          });
-        },
+    );
+  }
+
+  Color _getCategoryColor(String title) {
+    if (title.contains('Task')) {
+      return Colors.blue.withOpacity(0.5);
+    } else if (title.contains('Event')) {
+      return Colors.orange.withOpacity(0.5);
+    } else {
+      return Colors.green.withOpacity(0.5);
+    }
+  }
+
+  Widget _buildCategoryHeader(String title, int count) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: _getCategoryColor(title),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              "$count ${title.contains('Task') ? 'pending' : title.contains('Event') ? 'events' : 'new'}",
+              style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildSectionWithFilter(
       String title, Future<List<Map<String, dynamic>>> Function() fetchData) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10.0),
-          child: Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        ),
-        FutureBuilder(
-          future: fetchData(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Text('Error: ${snapshot.error}');
-            }
+    return FutureBuilder(
+      future: fetchData(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Text('Error: ${snapshot.error}');
+        }
 
-            final items = snapshot.data ?? [];
-            final filteredItems = items
-                .where((item) => item['title']
-                    .toString()
-                    .toLowerCase()
-                    .contains(_searchQuery))
-                .toList();
+        final items = snapshot.data ?? [];
+        final filteredItems = items
+            .where((item) =>
+                item['title'].toString().toLowerCase().contains(_searchQuery))
+            .toList();
 
-            if (filteredItems.isEmpty) {
-              return _buildEmptyState(title);
-            }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildCategoryHeader(title, filteredItems.length),
+            filteredItems.isEmpty
+                ? _buildEmptyState(title)
+                : ListView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    shrinkWrap: true,
+                    itemCount: filteredItems.length,
+                    itemBuilder: (context, index) {
+                      final item = filteredItems[index];
 
-            return ListView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              itemCount: filteredItems.length,
-              itemBuilder: (context, index) {
-                final item = filteredItems[index];
-
-                if (title.contains('Tasks')) {
-                  String priority = item['priority'] ?? 'Normal';
-                  return _buildTaskCard(
-                      item['title'],
-                      priorityColor(item['priority'] ??
-                          'normal'), // Default 'normal' untuk mencegah null
-                      "Due: ${DateFormat('dd MMM yyyy, HH:mm').format(DateTime.parse(item['due_date']))}");
-                } else if (title.contains('Events')) {
-                  return _buildEventCard(
-                    item['title'],
-                    "On: ${DateFormat('dd MMM yyyy, HH:mm').format(DateTime.parse(item['event_date']))}",
-                  );
-                } else {
-                  return _buildNoteCard(
-                    item['title'] ?? "Untitled",
-                    item['content'] ?? "No content available",
-                  );
-                }
-              },
-            );
-          },
-        ),
-        const SizedBox(height: 15),
-      ],
+                      if (title.contains('Tasks')) {
+                        String priority = item['priority'] ?? 'Normal';
+                        return _buildTaskCard(
+                          item['title'],
+                          priorityColor(priority), // Pastikan ada warna default
+                          "Due: ${DateFormat('MMM dd, yyyy - HH:mm').format(DateTime.parse(item['due_date']))}",
+                        );
+                      } else if (title.contains('Events')) {
+                        return _buildEventCard(
+                          item['title'],
+                          "On: ${DateFormat('MMM dd, yyyy - HH:mm').format(DateTime.parse(item['event_date']))}",
+                          item[
+                              'location'], // Tambahkan lokasi agar bisa dipakai di event card
+                        );
+                      } else {
+                        return _buildNoteCard(
+                          item['title'] ?? "Untitled",
+                          item['content'] ?? "No content available",
+                        );
+                      }
+                    },
+                  ),
+            const SizedBox(height: 15),
+          ],
+        );
+      },
     );
   }
 
@@ -376,76 +460,203 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _showNotifications() {
-    // Implement notifications view
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white, // Ubah warna latar belakang
+          title: Text(
+            "Notifikasi",
+            style: TextStyle(color: Colors.black), // Warna teks judul
+          ),
+          content: Text(
+            "Fitur belum tersedia saat ini.",
+            style: TextStyle(color: Colors.black87), // Warna teks isi
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                "OK",
+                style: TextStyle(color: Colors.blue), // Warna tombol
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  Widget _buildTaskCard(String title, Color priorityColor, String description) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: ListTile(
-        leading: Container(
-          width: 5,
-          height: 40,
-          decoration: BoxDecoration(
-            color: priorityColor, // Indikator warna prioritas
-            borderRadius: BorderRadius.circular(5),
+  Widget _buildTaskCard(String title, Color priorityColor, String dueDate) {
+    String cleanDate = dueDate.replaceFirst("Due: ", "").trim();
+    DateTime parsedDate = DateFormat("MMM dd, yyyy - HH:mm").parse(cleanDate);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+            color: Colors.grey[300]!, width: 1), // Garis pinggir abu-abu tipis
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05), // Bayangan tipis
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
-          description.length > 50
-              ? '${description.substring(0, 50)}...'
-              : description,
-          style: TextStyle(
-              color: Colors.black87), // Gunakan warna teks lebih netral
-        ),
-        trailing: Icon(Icons.flag,
-            color:
-                priorityColor), // Menampilkan warna prioritas dengan ikon flag
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 6,
+            height: 70,
+            decoration: BoxDecoration(
+              color: priorityColor.withOpacity(0.85),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(10),
+                bottomLeft: Radius.circular(10),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              title: Text(
+                title,
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black),
+              ),
+              subtitle: Row(
+                children: [
+                  Icon(Icons.calendar_today, size: 14, color: Colors.grey[500]),
+                  const SizedBox(width: 4),
+                  Text(
+                    DateFormat('MMM dd, yyyy').format(parsedDate),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(width: 16),
+                  Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
+                  const SizedBox(width: 4),
+                  Text(
+                    DateFormat('HH:mm').format(parsedDate),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildEventCard(String title, String time) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+  Widget _buildEventCard(String title, String dateTime, String? location) {
+    // Membersihkan teks tambahan sebelum parsing
+    String cleanDateTime =
+        dateTime.replaceAll(RegExp(r'^(On: |Due: )'), '').trim();
+    DateTime parsedDate =
+        DateFormat("MMM dd, yyyy - HH:mm").parse(cleanDateTime);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey[300]!, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: ListTile(
-        leading: Container(
-          width: 5,
-          height: 40,
-          color: Colors.orange.withOpacity(0.1), // Warna khas untuk event
-        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        leading: Icon(Icons.event, color: Colors.blueGrey[600], size: 28),
         title: Text(
           title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(
+              fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black),
         ),
-        subtitle: Text(
-          time,
-          style: TextStyle(color: Colors.orange.shade400),
+        subtitle: Row(
+          children: [
+            Icon(Icons.calendar_today, size: 14, color: Colors.grey[500]),
+            const SizedBox(width: 4),
+            Text(
+              DateFormat('MMM dd, yyyy').format(parsedDate),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+            const SizedBox(width: 16),
+            Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
+            const SizedBox(width: 4),
+            Text(
+              DateFormat('HH:mm').format(parsedDate),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+          ],
         ),
+        trailing: location != null && location.isNotEmpty
+            ? GestureDetector(
+                onTap: () => openLocationInMaps(location),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.blueGrey[300],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.location_on,
+                    size: 20,
+                    color: Colors.white,
+                  ),
+                ),
+              )
+            : null,
       ),
     );
   }
 
   Widget _buildNoteCard(String title, String content) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: ListTile(
-        leading: Container(
-          width: 5,
-          height: 40,
-          color: Colors.purple.withOpacity(0.1), // Warna khas untuk note
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
-          content.length > 50 ? '${content.substring(0, 50)}...' : content,
-          style: TextStyle(color: Colors.purple.shade400),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey[300]!, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              content,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+          ],
         ),
       ),
     );

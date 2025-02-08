@@ -38,6 +38,7 @@ class _TaskPageState extends State<TaskPage> {
   }
 
   Future<void> updateTask(TaskModel task) async {
+    FocusScope.of(context).requestFocus(FocusNode());
     setState(() => isLoading = true);
 
     final updatedTask = TaskModel(
@@ -275,30 +276,36 @@ class _TaskPageState extends State<TaskPage> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      value: priority,
+                      value: priority, // Using the local variable directly
                       decoration: InputDecoration(
                         labelText: "Prioritas",
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 16,
-                        ),
+                            horizontal: 12, vertical: 16),
                       ),
-                      items: ['High', 'Normal', 'low'].map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
+                      items: const [
+                        DropdownMenuItem(value: 'High', child: Text('High')),
+                        DropdownMenuItem(
+                            value: 'Normal', child: Text('Normal')),
+                        DropdownMenuItem(value: 'Low', child: Text('Low')),
+                      ],
                       onChanged: isLoading
                           ? null
-                          : (val) => priority = val ?? priority,
+                          : (String? newValue) {
+                              if (newValue != null) {
+                                setDialogState(() {
+                                  priority = newValue;
+                                });
+                              }
+                            },
                     ),
                     const SizedBox(height: 16),
+
+                    // Status Dropdown
                     DropdownButtonFormField<String>(
-                      value: status,
+                      value: status, // Using the local variable directly
                       decoration: InputDecoration(
                         labelText: "Status",
                         border: OutlineInputBorder(
@@ -309,15 +316,24 @@ class _TaskPageState extends State<TaskPage> {
                           vertical: 16,
                         ),
                       ),
-                      items: ['Completed', 'Pending', 'Not Completed']
-                          .map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                      onChanged:
-                          isLoading ? null : (val) => status = val ?? status,
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'Completed', child: Text('Completed')),
+                        DropdownMenuItem(
+                            value: 'Pending', child: Text('Pending')),
+                        DropdownMenuItem(
+                            value: 'Not Completed',
+                            child: Text('Not Completed')),
+                      ],
+                      onChanged: isLoading
+                          ? null
+                          : (String? newValue) {
+                              if (newValue != null) {
+                                setDialogState(() {
+                                  status = newValue;
+                                });
+                              }
+                            },
                     ),
                   ],
                 ),
