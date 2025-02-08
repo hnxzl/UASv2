@@ -7,6 +7,7 @@ import 'package:tododo/pages/note_pages.dart';
 import 'package:tododo/pages/event_pages.dart';
 import 'package:tododo/pages/task_pages.dart';
 import 'package:tododo/pages/setting_pages.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DashboardPage extends StatefulWidget {
   final AuthService authService;
@@ -20,9 +21,11 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  String username = "User";
+  String username = "User ";
   int _selectedIndex = 0;
-  String _searchQuery = ""; // Tambahkan untuk menyimpan teks pencarian
+  String _searchQuery = "";
+  bool isDarkMode = false;
+  Color accentColor = Colors.blue;
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
@@ -30,6 +33,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     _loadUserData();
+    _loadPreferences();
     _initializeNotifications();
   }
 
@@ -37,9 +41,24 @@ class _DashboardPageState extends State<DashboardPage> {
     final fetchedUsername = await widget.authService.getUserUsername();
     if (mounted) {
       setState(() {
-        username = fetchedUsername ?? "User";
+        username = fetchedUsername ?? "User ";
       });
     }
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isDarkMode = prefs.getBool('isDarkMode') ?? false;
+      final savedColor = prefs.getInt('accentColor') ?? Colors.blue.value;
+      accentColor = Color(savedColor);
+    });
+  }
+
+  Future<void> _savePreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isDarkMode', isDarkMode);
+    await prefs.setInt('accentColor', accentColor.value);
   }
 
   Future<void> _initializeNotifications() async {
@@ -97,40 +116,48 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: IndexedStack(
-          index: _selectedIndex,
-          children: [
-            _buildDashboardView(),
-            EventPage(authService: widget.authService),
-            NotePage(authService: widget.authService),
-            TaskPage(authService: widget.authService),
-            SettingsPage(authService: widget.authService),
+    final theme = isDarkMode ? ThemeData.dark() : ThemeData.light();
+
+    return Theme(
+      data: theme.copyWith(
+        primaryColor: accentColor,
+        colorScheme: theme.colorScheme.copyWith(secondary: accentColor),
+      ),
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: SafeArea(
+          child: IndexedStack(
+            index: _selectedIndex,
+            children: [
+              _buildDashboardView(), // Dashboard (Index 0)
+              TaskPage(authService: widget.authService), // Task (Index 1)
+              EventPage(authService: widget.authService), // Events (Index 2)
+              NotePage(authService: widget.authService), // Notes (Index 3)
+              SettingsPage(
+                  authService: widget.authService), // Settings (Index 4)
+            ],
+          ),
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: accentColor,
+          unselectedItemColor: const Color.fromARGB(255, 131, 129, 129),
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          items: const [
+            BottomNavigationBarItem(
+                icon: Icon(Icons.dashboard), label: "Dashboard"),
+            BottomNavigationBarItem(icon: Icon(Icons.task), label: "Task"),
+            BottomNavigationBarItem(icon: Icon(Icons.event), label: "Events"),
+            BottomNavigationBarItem(icon: Icon(Icons.note), label: "Notes"),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.settings), label: "Settings"),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard), label: "Dashboard"),
-          BottomNavigationBarItem(icon: Icon(Icons.event), label: "Events"),
-          BottomNavigationBarItem(icon: Icon(Icons.note), label: "Notes"),
-          BottomNavigationBarItem(icon: Icon(Icons.task), label: "Task"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.settings), label: "Settings"),
-        ],
       ),
     );
   }
 
-  @override
   Widget _buildDashboardView() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,35 +167,9 @@ class _DashboardPageState extends State<DashboardPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text("Welcome back, $username",
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold)),
-                  IconButton(
-                    icon: const Icon(Icons.notifications,
-                        color: Colors.redAccent),
-                    onPressed: () {},
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                decoration: InputDecoration(
-                  hintText: "Search tasks, notes & events...",
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30)),
-                  filled: true,
-                  fillColor: Colors.grey[200],
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value.toLowerCase(); // Update search query
-                  });
-                },
-              ),
+              _buildHeader(),
+              const SizedBox(height: 12),
+              _buildSearchBar(),
             ],
           ),
         ),
@@ -178,94 +179,11 @@ class _DashboardPageState extends State<DashboardPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSectionHeader("Today's Tasks", "Your tasks"),
-                FutureBuilder(
-                  future: fetchTasks(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError) {
-                      return Text('Error: ${snapshot.error}');
-                    }
-                    final tasks = snapshot.data ?? [];
-                    final filteredTasks = tasks
-                        .where((task) =>
-                            task['title'].toLowerCase().contains(_searchQuery))
-                        .toList();
-
-                    return filteredTasks.isEmpty
-                        ? const Text("No tasks available")
-                        : Column(
-                            children: filteredTasks
-                                .map((task) => _buildTaskCard(
-                                    task['title'],
-                                    "Due: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(task['due_date']))}",
-                                    Colors.blue))
-                                .toList(),
-                          );
-                  },
-                ),
+                _buildSectionWithFilter("Today's Tasks", fetchTasks),
                 const SizedBox(height: 10),
-                _buildSectionHeader("Upcoming Events", "Your events"),
-                FutureBuilder(
-                  future: fetchEvents(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError) {
-                      return Text('Error: ${snapshot.error}');
-                    }
-                    final events = snapshot.data ?? [];
-                    final filteredEvents = events
-                        .where((event) =>
-                            event['title'].toLowerCase().contains(_searchQuery))
-                        .toList();
-
-                    return filteredEvents.isEmpty
-                        ? const Text("No events available")
-                        : Column(
-                            children: filteredEvents
-                                .map((event) => _buildEventCard(event['title'],
-                                    "On: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(event['event_date']))}"))
-                                .toList(),
-                          );
-                  },
-                ),
+                _buildSectionWithFilter("Upcoming Events", fetchEvents),
                 const SizedBox(height: 10),
-                _buildSectionHeader("Recent Notes", "Your notes"),
-                FutureBuilder(
-                  future: fetchNotes(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError) {
-                      return Text('Error: ${snapshot.error}');
-                    }
-                    final notes = snapshot.data ?? [];
-                    final filteredNotes = notes
-                        .where((note) =>
-                            note['title']
-                                .toLowerCase()
-                                .contains(_searchQuery) ||
-                            note['content']
-                                .toLowerCase()
-                                .contains(_searchQuery))
-                        .toList();
-
-                    return filteredNotes.isEmpty
-                        ? const Text("No notes available")
-                        : Column(
-                            children: filteredNotes
-                                .map((note) => _buildNoteCard(
-                                    note['title'] ?? "Untitled",
-                                    note['content'] ?? "No content available"))
-                                .toList(),
-                          );
-                  },
-                ),
+                _buildSectionWithFilter("Recent Notes", fetchNotes),
               ],
             ),
           ),
@@ -274,12 +192,164 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildSectionHeader(String title, String subtitle) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Text(title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: accentColor.withOpacity(0.8),
+              child: Text(
+                username[0].toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Welcome back,",
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                Text(
+                  username,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        IconButton(
+          icon: const Icon(Icons.notifications_none,
+              size: 28, color: Colors.redAccent),
+          onPressed: () => _showNotifications(),
+        ),
+      ],
     );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.grey[800] : Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        decoration: InputDecoration(
+          hintText: "Search tasks, notes & events...",
+          prefixIcon: const Icon(Icons.search),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+        onChanged: (value) {
+          setState(() {
+            _searchQuery = value.toLowerCase();
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildSectionWithFilter(
+      String title, Future<List<Map<String, dynamic>>> Function() fetchData) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        FutureBuilder(
+          future: fetchData(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Text('Error: ${snapshot.error}');
+            }
+            final items = snapshot.data ?? [];
+            final filteredItems = items
+                .where((item) => item['title']
+                    .toString()
+                    .toLowerCase()
+                    .contains(_searchQuery))
+                .toList();
+
+            if (filteredItems.isEmpty) {
+              return _buildEmptyState(title);
+            }
+
+            return Column(
+              children: filteredItems.map((item) {
+                if (title.contains('Tasks')) {
+                  return _buildTaskCard(
+                    item['title'],
+                    "Due: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(item['due_date']))}",
+                    accentColor,
+                  );
+                } else if (title.contains('Events')) {
+                  return _buildEventCard(
+                    item['title'],
+                    "On: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(item['event_date']))}",
+                  );
+                } else {
+                  return _buildNoteCard(
+                    item['title'] ?? "Untitled",
+                    item['content'] ?? "No content available",
+                  );
+                }
+              }).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState(String section) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            section.contains('Tasks')
+                ? Icons.task
+                : section.contains('Events')
+                    ? Icons.event
+                    : Icons.note,
+            size: 48,
+            color: Colors.grey,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "No ${section.toLowerCase()} available",
+            style: const TextStyle(color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNotifications() {
+    // Implement notifications view
   }
 
   Widget _buildTaskCard(String title, String time, Color color) {
