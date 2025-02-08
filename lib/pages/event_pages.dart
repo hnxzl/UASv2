@@ -313,10 +313,19 @@ class _EventPageState extends State<EventPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Events")),
+      backgroundColor: Colors.white, // Warna background utama
+      appBar: AppBar(
+        title: const Text(
+          "Event 🗓️",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Color(0xFF5FB2FF), // Warna lebih gelap untuk AppBar
+        centerTitle: true,
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showEventDialog(),
-        child: const Icon(Icons.add),
+        backgroundColor: Color(0xFFFFC8DD), // Warna tombol tambah
+        child: const Icon(Icons.add, color: Colors.white),
       ),
       body: StreamBuilder(
         stream: eventDatabase.getEventsByUser(userId!),
@@ -403,60 +412,107 @@ class _EventPageState extends State<EventPage> {
                 },
                 child: Card(
                   elevation: 2,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    title: Text(
-                      event.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Column(
+                  color: Color(
+                      0xFFE3F2FD), // Biru pastel agar soft dan tetap elegan
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 8),
-                        Text(event.description),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(Icons.calendar_today, size: 16),
-                            const SizedBox(width: 4),
-                            Text(
-                              DateFormat('yyyy-MM-dd HH:mm')
-                                  .format(event.eventDate),
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            const Spacer(),
-                            GestureDetector(
-                              onTap: () => openLocationInMaps(event.location),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.location_on,
-                                      size: 16,
-                                      color: Colors.white,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      event.location,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                event.title,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
                                 ),
                               ),
+                              const SizedBox(height: 8),
+                              Text(
+                                event.description,
+                                style: TextStyle(
+                                  color: Colors.black54,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today,
+                                    size: 16,
+                                    color: Colors.blueGrey,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    DateFormat('MMM dd, yyyy')
+                                        .format(event.eventDate),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.blueGrey,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Icon(
+                                    Icons.access_time,
+                                    size: 16,
+                                    color: Colors.blueGrey,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    DateFormat('HH:mm').format(event.eventDate),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.blueGrey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    size: 16,
+                                    color: Colors.blueGrey,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      event.location,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.blueGrey,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => openLocationInMaps(event.location),
+                          child: Container(
+                            width: 60, // Kotak lebih rapi
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color:
+                                  Color(0xFFFFC1E3), // Pink pastel buat aksen
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          ],
+                            child: Icon(
+                              Icons.location_on,
+                              size: 28,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ],
                     ),

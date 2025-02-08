@@ -46,6 +46,19 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  Color priorityColor(String priority) {
+    switch (priority.toLowerCase()) {
+      case 'high':
+        return Colors.red;
+      case 'medium':
+        return Colors.orange;
+      case 'low':
+        return Colors.green;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -120,8 +133,9 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return Theme(
       data: theme.copyWith(
-        primaryColor: accentColor,
-        colorScheme: theme.colorScheme.copyWith(secondary: accentColor),
+        primaryColor: Color(0xFF5FB2FF), // Warna biru untuk primary color
+        colorScheme: theme.colorScheme.copyWith(
+            secondary: Color(0xFFFFC8DD)), // Warna pink untuk secondary color
       ),
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
@@ -140,7 +154,8 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
         bottomNavigationBar: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
-          selectedItemColor: accentColor,
+          selectedItemColor:
+              Color(0xFF5FB2FF), // Warna biru untuk item terpilih
           unselectedItemColor: const Color.fromARGB(255, 131, 129, 129),
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
@@ -200,7 +215,7 @@ class _DashboardPageState extends State<DashboardPage> {
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundColor: accentColor.withOpacity(0.8),
+              backgroundColor: Color(0xFF5FB2FF), // Warna biru untuk header
               child: Text(
                 username[0].toUpperCase(),
                 style: const TextStyle(
@@ -254,7 +269,8 @@ class _DashboardPageState extends State<DashboardPage> {
       child: TextField(
         decoration: InputDecoration(
           hintText: "Search tasks, notes & events...",
-          prefixIcon: const Icon(Icons.search),
+          prefixIcon: const Icon(Icons.search,
+              color: Color(0xFF5FB2FF)), // Warna biru untuk ikon
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
@@ -272,9 +288,12 @@ class _DashboardPageState extends State<DashboardPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10.0),
+          child: Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
         ),
         FutureBuilder(
           future: fetchData(),
@@ -285,6 +304,7 @@ class _DashboardPageState extends State<DashboardPage> {
             if (snapshot.hasError) {
               return Text('Error: ${snapshot.error}');
             }
+
             final items = snapshot.data ?? [];
             final filteredItems = items
                 .where((item) => item['title']
@@ -297,18 +317,24 @@ class _DashboardPageState extends State<DashboardPage> {
               return _buildEmptyState(title);
             }
 
-            return Column(
-              children: filteredItems.map((item) {
+            return ListView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              itemCount: filteredItems.length,
+              itemBuilder: (context, index) {
+                final item = filteredItems[index];
+
                 if (title.contains('Tasks')) {
+                  String priority = item['priority'] ?? 'Normal';
                   return _buildTaskCard(
-                    item['title'],
-                    "Due: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(item['due_date']))}",
-                    accentColor,
-                  );
+                      item['title'],
+                      priorityColor(item['priority'] ??
+                          'normal'), // Default 'normal' untuk mencegah null
+                      "Due: ${DateFormat('dd MMM yyyy, HH:mm').format(DateTime.parse(item['due_date']))}");
                 } else if (title.contains('Events')) {
                   return _buildEventCard(
                     item['title'],
-                    "On: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(item['event_date']))}",
+                    "On: ${DateFormat('dd MMM yyyy, HH:mm').format(DateTime.parse(item['event_date']))}",
                   );
                 } else {
                   return _buildNoteCard(
@@ -316,10 +342,11 @@ class _DashboardPageState extends State<DashboardPage> {
                     item['content'] ?? "No content available",
                   );
                 }
-              }).toList(),
+              },
             );
           },
         ),
+        const SizedBox(height: 15),
       ],
     );
   }
@@ -352,33 +379,74 @@ class _DashboardPageState extends State<DashboardPage> {
     // Implement notifications view
   }
 
-  Widget _buildTaskCard(String title, String time, Color color) {
+  Widget _buildTaskCard(String title, Color priorityColor, String description) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: ListTile(
-        leading: Container(width: 5, height: 40, color: color),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(time, style: TextStyle(color: Colors.red.shade400)),
+        leading: Container(
+          width: 5,
+          height: 40,
+          decoration: BoxDecoration(
+            color: priorityColor, // Indikator warna prioritas
+            borderRadius: BorderRadius.circular(5),
+          ),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          description.length > 50
+              ? '${description.substring(0, 50)}...'
+              : description,
+          style: TextStyle(
+              color: Colors.black87), // Gunakan warna teks lebih netral
+        ),
+        trailing: Icon(Icons.flag,
+            color:
+                priorityColor), // Menampilkan warna prioritas dengan ikon flag
+      ),
+    );
+  }
+
+  Widget _buildEventCard(String title, String time) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: ListTile(
+        leading: Container(
+          width: 5,
+          height: 40,
+          color: Colors.orange.withOpacity(0.1), // Warna khas untuk event
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          time,
+          style: TextStyle(color: Colors.orange.shade400),
+        ),
       ),
     );
   }
 
   Widget _buildNoteCard(String title, String content) {
     return Card(
-      child: ListTile(
-        title: Text(title),
-        subtitle: Text(content),
-      ),
-    );
-  }
-
-  Widget _buildEventCard(String title, String date) {
-    return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: ListTile(
-        leading: const Icon(Icons.event, color: Colors.orange),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(date, style: const TextStyle(color: Colors.grey)),
+        leading: Container(
+          width: 5,
+          height: 40,
+          color: Colors.purple.withOpacity(0.1), // Warna khas untuk note
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          content.length > 50 ? '${content.substring(0, 50)}...' : content,
+          style: TextStyle(color: Colors.purple.shade400),
+        ),
       ),
     );
   }

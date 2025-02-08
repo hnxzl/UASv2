@@ -45,7 +45,23 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'TodoDo',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch:
+            Colors.blueGrey, // Bisa diganti jika masih ada warna ungu
+        colorScheme: ColorScheme.light(
+          primary: Color(0xFF5FB2FF), // Warna utama untuk tombol
+          background: Color(0xFFBDE0FE), // Warna background utama
+          surface: Color(0xFFA2D2FF), // Warna untuk card atau pop-up
+          onPrimary: Colors.white, // Warna teks di atas warna utama
+          onBackground: Colors.black, // Warna teks utama agar tidak ungu
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: Color(0xFF5FB2FF), // Warna app bar
+          titleTextStyle: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Colors.white, // Warna teks app bar
+          ),
+        ),
       ),
       home: AuthStateHandler(authService: authService),
     );

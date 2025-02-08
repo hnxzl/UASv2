@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tododo/auth/auth_service.dart';
 import 'package:tododo/models/note_model.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:tododo/services/note_database.dart';
 
 class NotePage extends StatefulWidget {
@@ -44,128 +45,53 @@ class _NotePageState extends State<NotePage> {
     );
 
     await noteDatabase.createNote(newNote);
-
     if (mounted) {
-      setState(() {}); // 🔄 Refresh UI setelah save
+      setState(() {});
       noteController.clear();
       titleController.clear();
-      Navigator.pop(context); // ✅ Tutup dialog setelah save
+      Navigator.pop(context);
     }
   }
 
-  /// Update catatan dengan dialog
-  Future<void> updateNoteDialog(NoteModel note) async {
-    titleController.text = note.title;
-    noteController.text = note.content;
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Edit Note"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(
-                  hintText: "Edit title",
-                  labelText: "Title",
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: noteController,
-                decoration: const InputDecoration(
-                  hintText: "Edit your note",
-                  labelText: "Content",
-                ),
-                maxLines: null,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () async {
-                await noteDatabase.updateNote(
-                  note,
-                  noteController.text,
-                  titleController.text,
-                );
-                if (mounted) {
-                  setState(() {}); // 🔄 Refresh UI setelah update
-                  Navigator.pop(context); // ✅ Langsung menutup dialog
-                }
-              },
-              child: const Text("Save"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  /// Hapus catatan dengan konfirmasi
-  Future<bool> deleteNote(NoteModel note) async {
-    final confirmDelete = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Delete Note?"),
-          content: const Text("This action cannot be undone."),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () async {
-                await noteDatabase.deleteNote(note);
-                if (mounted) {
-                  setState(() {}); // 🔄 Refresh UI setelah delete
-                }
-                Navigator.pop(context, true);
-              },
-              child: const Text("Delete"),
-            ),
-          ],
-        );
-      },
-    );
-
-    return confirmDelete ?? false;
-  }
-
-  /// Dialog tambah catatan baru
-  void showAddNoteDialog() {
-    titleController.clear();
-    noteController.clear();
+  /// Dialog Tambah atau Edit Catatan
+  void showNoteDialog({NoteModel? note}) {
+    titleController.text = note?.title ?? '';
+    noteController.text = note?.content ?? '';
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("New Note"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: Color(0xFFFFF8E1), // Warna soft
+        title: Text(
+          note == null ? "Tambah Catatan" : "Edit Catatan",
+          style: GoogleFonts.patrickHand(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: titleController,
-              autofocus: true,
-              decoration: const InputDecoration(
-                hintText: "Enter title",
-                labelText: "Title",
+              decoration: InputDecoration(
+                labelText: "Judul Catatan",
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                filled: true,
+                fillColor: Colors.white,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             TextField(
               controller: noteController,
-              decoration: const InputDecoration(
-                hintText: "Enter your note",
-                labelText: "Content",
+              decoration: InputDecoration(
+                labelText: "Isi Catatan",
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                filled: true,
+                fillColor: Colors.white,
               ),
               maxLines: null,
             ),
@@ -174,26 +100,79 @@ class _NotePageState extends State<NotePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
+            child: const Text("Batal"),
           ),
-          TextButton(
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(0xFF5FB2FF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
             onPressed: () async {
-              await addNewNote();
+              if (note == null) {
+                await addNewNote();
+              } else {
+                await noteDatabase.updateNote(
+                    note, noteController.text, titleController.text);
+                if (mounted) setState(() {});
+                Navigator.pop(context);
+              }
             },
-            child: const Text("Save"),
+            child: const Text("Simpan"),
           ),
         ],
       ),
     );
   }
 
+  /// Konfirmasi Hapus Catatan
+  Future<bool> deleteNote(NoteModel note) async {
+    return (await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Delete Note?"),
+            content: const Text("This action cannot be undone."),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () async {
+                  await noteDatabase.deleteNote(note);
+                  if (mounted) setState(() {});
+                  Navigator.pop(context, true);
+                },
+                child:
+                    const Text("Delete", style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        )) ??
+        false;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Notes")),
+      backgroundColor: Color(0xFFFFF8E1), // Warna krem pastel
+      appBar: AppBar(
+        title: Text(
+          "Notes 📝",
+          style: GoogleFonts.patrickHand(
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+          ),
+        ),
+        backgroundColor: Color(0xFF5FB2FF), // Warna soft pink
+        centerTitle: true,
+      ),
       floatingActionButton: FloatingActionButton(
-        onPressed: showAddNoteDialog,
-        child: const Icon(Icons.add),
+        onPressed: () => showNoteDialog(),
+        backgroundColor: Color(0xFF5FB2FF),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
       body: StreamBuilder(
         stream: noteDatabase.getNotesByUser(userId!),
@@ -207,25 +186,36 @@ class _NotePageState extends State<NotePage> {
 
           final notes = snapshot.data ?? [];
           if (notes.isEmpty) {
-            return const Center(child: Text('No notes yet'));
+            return const Center(
+              child: Text(
+                'No notes yet',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+            );
           }
 
           return ListView.separated(
+            padding: const EdgeInsets.all(12),
             itemCount: notes.length,
-            separatorBuilder: (context, index) =>
-                const Divider(thickness: 1, height: 20),
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final note = notes[index];
               return Dismissible(
                 key: Key(note.id),
                 background: Container(
-                  color: Colors.green,
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.only(right: 20.0),
                   child: const Icon(Icons.edit, color: Colors.white),
                 ),
                 secondaryBackground: Container(
-                  color: Colors.red,
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   alignment: Alignment.centerLeft,
                   padding: const EdgeInsets.only(left: 20.0),
                   child: const Icon(Icons.delete, color: Colors.white),
@@ -234,18 +224,53 @@ class _NotePageState extends State<NotePage> {
                   if (direction == DismissDirection.endToStart) {
                     return await deleteNote(note);
                   } else {
-                    updateNoteDialog(note);
+                    showNoteDialog(note: note);
                     return false;
                   }
                 },
-                child: ListTile(
-                  title: Text(
-                    note.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Color(
+                        0xFFFFF3B0), // Kuning pastel, biar mirip sticky notes
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: Color(0xFFE6A700), width: 1), // Efek kertas
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 4,
+                        offset: Offset(2, 2),
+                      ),
+                    ],
                   ),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 5.0),
-                    child: Text(note.content),
+                  padding: const EdgeInsets.all(14),
+                  constraints: BoxConstraints(
+                      minHeight: 120), // Biar nggak terlalu pendek
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        note.title,
+                        style: GoogleFonts.patrickHand(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 22,
+                          decoration: TextDecoration.underline,
+                          color: Color(
+                              0xFF6D4C41), // Warna coklat tua biar mirip tinta pena
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        note.content,
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.patrickHand(
+                          fontSize: 18,
+                          fontStyle: FontStyle.italic, // Tambahin efek miring
+                          color: Color(0xFF6D4C41),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );

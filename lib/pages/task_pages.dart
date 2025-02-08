@@ -38,9 +38,7 @@ class _TaskPageState extends State<TaskPage> {
   }
 
   Future<void> updateTask(TaskModel task) async {
-    setState(() {
-      isLoading = true;
-    });
+    setState(() => isLoading = true);
 
     final updatedTask = TaskModel(
       id: task.id,
@@ -68,9 +66,13 @@ class _TaskPageState extends State<TaskPage> {
   }
 
   Future<void> deleteTask(TaskModel task) async {
+    FocusScope.of(context)
+        .requestFocus(FocusNode()); // Hilangkan fokus sebelum dialog muncul
+
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: const Text('Delete Task'),
         content: const Text('Are you sure you want to delete this task?'),
         actions: [
@@ -88,46 +90,9 @@ class _TaskPageState extends State<TaskPage> {
     );
 
     if (confirm == true) {
-      setState(() {
-        isLoading = true;
-      });
-
+      setState(() => isLoading = true);
       await taskDatabase.deleteTask(task);
-
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
-      }
-    }
-  }
-
-  void selectDueDate(
-      BuildContext context, Function(DateTime) onSelected) async {
-    final DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: dueDate ?? DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2101),
-    );
-
-    if (pickedDate != null) {
-      final TimeOfDay? pickedTime = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.now(),
-      );
-
-      if (pickedTime != null) {
-        final DateTime selectedDateTime = DateTime(
-          pickedDate.year,
-          pickedDate.month,
-          pickedDate.day,
-          pickedTime.hour,
-          pickedTime.minute,
-        );
-
-        onSelected(selectedDateTime);
-      }
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -137,33 +102,30 @@ class _TaskPageState extends State<TaskPage> {
           descriptionController.text.isEmpty ||
           dueDate == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please fill all required fields')),
+          const SnackBar(
+            content: Text('Please fill all required fields'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
         return;
       }
 
       if (!mounted) return;
-      setState(() {
-        isLoading = true;
-      });
+      setState(() => isLoading = true);
 
       final newTask = TaskModel(
-        // Remove id parameter - let Supabase generate it
         userId: userId!,
         title: titleController.text,
         description: descriptionController.text,
         dueDate: dueDate!,
         priority: priority,
         status: status,
-        // Remove createdAt and updatedAt - let them use defaults
       );
 
       await taskDatabase.createTask(newTask);
 
       if (!mounted) return;
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
 
       titleController.clear();
       descriptionController.clear();
@@ -172,23 +134,20 @@ class _TaskPageState extends State<TaskPage> {
       status = 'Pending';
 
       Navigator.pop(context);
-    } catch (e, stackTrace) {
-      print('Error adding task: $e');
-      print('Stack trace: $stackTrace');
-
+    } catch (e) {
       if (!mounted) return;
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add task: ${e.toString()}')),
+        SnackBar(
+          content: Text('Failed to add task: ${e.toString()}'),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
 
   void showTaskDialog([TaskModel? task]) {
-    // Reset form state di awal
     if (task != null) {
       titleController.text = task.title;
       descriptionController.text = task.description;
@@ -205,45 +164,61 @@ class _TaskPageState extends State<TaskPage> {
 
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent dismissing during loading
+      barrierDismissible: false,
       builder: (context) => WillPopScope(
-        onWillPop: () async => !isLoading, // Prevent back button during loading
+        onWillPop: () async => !isLoading,
         child: StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text(task == null ? "New Task" : "Edit Task"),
+              insetPadding: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              title: Text(
+                task == null ? "Tugas Baru" : "Edit Tugas",
+                style:
+                    const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+              ),
               content: SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextField(
                       controller: titleController,
-                      decoration: const InputDecoration(
-                        labelText: "Title",
-                        errorText: null, // Reset error state
+                      decoration: InputDecoration(
+                        labelText: "Judul",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 16,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
                     TextField(
                       controller: descriptionController,
-                      decoration: const InputDecoration(
-                        labelText: "Description",
-                        errorText: null, // Reset error state
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: "Isi",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 16,
+                        ),
                       ),
-                      maxLines: null,
                     ),
-                    const SizedBox(height: 8),
-                    ListTile(
-                      title: const Text("Due Date & Time"),
-                      subtitle: Text(
-                        dueDate == null
-                            ? "Select date and time"
-                            : DateFormat('yyyy-MM-dd HH:mm').format(dueDate!),
-                      ),
+                    const SizedBox(height: 16),
+                    InkWell(
                       onTap: isLoading
                           ? null
                           : () async {
-                              // Pilih tanggal
+                              FocusScope.of(context).unfocus();
                               final DateTime? pickedDate = await showDatePicker(
                                 context: context,
                                 initialDate: dueDate ?? DateTime.now(),
@@ -252,7 +227,6 @@ class _TaskPageState extends State<TaskPage> {
                               );
 
                               if (pickedDate != null) {
-                                // Pilih waktu setelah memilih tanggal
                                 final TimeOfDay? pickedTime =
                                     await showTimePicker(
                                   context: context,
@@ -260,26 +234,59 @@ class _TaskPageState extends State<TaskPage> {
                                 );
 
                                 if (pickedTime != null) {
-                                  // Gabungkan tanggal dan waktu
-                                  final DateTime combinedDateTime = DateTime(
-                                    pickedDate.year,
-                                    pickedDate.month,
-                                    pickedDate.day,
-                                    pickedTime.hour,
-                                    pickedTime.minute,
-                                  );
-
                                   setDialogState(() {
-                                    dueDate = combinedDateTime;
+                                    dueDate = DateTime(
+                                      pickedDate.year,
+                                      pickedDate.month,
+                                      pickedDate.day,
+                                      pickedTime.hour,
+                                      pickedTime.minute,
+                                    );
                                   });
                                 }
                               }
                             },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.calendar_today, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                dueDate == null
+                                    ? "Pilih tanggal jatuh tempo"
+                                    : DateFormat('dd MMM yyyy, HH:mm')
+                                        .format(dueDate!),
+                                style: TextStyle(
+                                  color: dueDate == null
+                                      ? Colors.grey[600]
+                                      : Colors.black,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
+                    const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       value: priority,
-                      decoration: const InputDecoration(labelText: "Priority"),
-                      items: ['High', 'Normal', 'Low'].map((String value) {
+                      decoration: InputDecoration(
+                        labelText: "Prioritas",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 16,
+                        ),
+                      ),
+                      items: ['High', 'Normal', 'low'].map((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
                           child: Text(value),
@@ -287,17 +294,21 @@ class _TaskPageState extends State<TaskPage> {
                       }).toList(),
                       onChanged: isLoading
                           ? null
-                          : (newValue) {
-                              if (newValue != null) {
-                                setDialogState(() {
-                                  priority = newValue;
-                                });
-                              }
-                            },
+                          : (val) => priority = val ?? priority,
                     ),
+                    const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       value: status,
-                      decoration: const InputDecoration(labelText: "Status"),
+                      decoration: InputDecoration(
+                        labelText: "Status",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 16,
+                        ),
+                      ),
                       items: ['Completed', 'Pending', 'Not Completed']
                           .map((String value) {
                         return DropdownMenuItem<String>(
@@ -305,15 +316,8 @@ class _TaskPageState extends State<TaskPage> {
                           child: Text(value),
                         );
                       }).toList(),
-                      onChanged: isLoading
-                          ? null
-                          : (newValue) {
-                              if (newValue != null) {
-                                setDialogState(() {
-                                  status = newValue;
-                                });
-                              }
-                            },
+                      onChanged:
+                          isLoading ? null : (val) => status = val ?? status,
                     ),
                   ],
                 ),
@@ -321,12 +325,13 @@ class _TaskPageState extends State<TaskPage> {
               actions: [
                 TextButton(
                   onPressed: isLoading ? null : () => Navigator.pop(context),
-                  child: const Text("Cancel"),
+                  child: const Text("Batal"),
                 ),
-                TextButton(
+                FilledButton(
                   onPressed: isLoading
                       ? null
                       : () async {
+                          FocusScope.of(context).unfocus();
                           if (task == null) {
                             await addNewTask();
                           } else {
@@ -334,12 +339,8 @@ class _TaskPageState extends State<TaskPage> {
                           }
                         },
                   child: isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(task == null ? "Save" : "Update"),
+                      ? const CircularProgressIndicator(strokeWidth: 2)
+                      : Text(task == null ? "Simpan" : "Perbarui"),
                 ),
               ],
             );
@@ -352,21 +353,42 @@ class _TaskPageState extends State<TaskPage> {
   Color _getPriorityColor(String priority) {
     switch (priority) {
       case 'High':
-        return const Color.fromARGB(255, 204, 77, 89);
+        return Colors.red.withOpacity(0.1);
       case 'Low':
-        return const Color.fromARGB(255, 138, 255, 142);
+        return Colors.green.withOpacity(0.1);
       default:
-        return const Color.fromARGB(255, 123, 193, 243);
+        return Colors.blue.withOpacity(0.1);
+    }
+  }
+
+  Color _getPriorityTextColor(String priority) {
+    switch (priority) {
+      case 'High':
+        return Colors.red;
+      case 'Low':
+        return Colors.green;
+      default:
+        return Colors.blue;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Tasks")),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text(
+          "Tugas ✅",
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: Color(0xFF5FB2FF), // Warna header
+        centerTitle: true,
+        elevation: 0,
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showTaskDialog(),
-        child: const Icon(Icons.add),
+        backgroundColor: Color(0xFFFFC8DD), // Warna tombol tambah
+        child: const Icon(Icons.add, color: Colors.white),
       ),
       body: StreamBuilder(
         stream: taskDatabase.getTasksByUser(userId!),
@@ -375,12 +397,29 @@ class _TaskPageState extends State<TaskPage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(child: Text('Terjadi Kesalahan: ${snapshot.error}'));
           }
 
           final tasks = snapshot.data ?? [];
           if (tasks.isEmpty) {
-            return const Center(child: Text('No tasks yet'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.task_alt,
+                      size: 64, color: Colors.white.withOpacity(0.5)),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Belum ada tugas',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white.withOpacity(0.7),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            );
           }
 
           return ListView.separated(
@@ -393,26 +432,26 @@ class _TaskPageState extends State<TaskPage> {
                 key: Key(task.id),
                 background: Container(
                   decoration: BoxDecoration(
-                    color: Colors.green,
-                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.blue.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.centerLeft,
                   padding: const EdgeInsets.only(left: 20),
-                  child: const Icon(Icons.edit, color: Colors.white),
+                  child: const Icon(Icons.edit, color: Colors.blue),
                 ),
                 secondaryBackground: Container(
                   decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.red.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.only(right: 20),
-                  child: const Icon(Icons.delete, color: Colors.white),
+                  child: const Icon(Icons.delete, color: Colors.red),
                 ),
                 onDismissed: (direction) async {
                   if (direction == DismissDirection.endToStart) {
                     await deleteTask(task);
-                    setState(() {}); // Perbarui tampilan setelah menghapus
+                    setState(() {});
                   }
                 },
                 confirmDismiss: (direction) async {
@@ -423,34 +462,126 @@ class _TaskPageState extends State<TaskPage> {
                   return true;
                 },
                 child: Card(
-                  color: _getPriorityColor(task.priority),
-                  elevation: 2,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    title: Text(
-                      task.title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        decoration: task.status == 'Completed'
-                            ? TextDecoration.lineThrough
-                            : null,
-                      ),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: Colors.grey.withOpacity(0.2),
                     ),
-                    subtitle: Column(
+                  ),
+                  color: _getPriorityColor(task.priority),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 8),
-                        Text(task.description),
-                        const SizedBox(height: 8),
                         Row(
                           children: [
-                            const Icon(Icons.calendar_today, size: 16),
+                            Expanded(
+                              child: Text(
+                                task.title,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  decoration: task.status == 'Completed'
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                  color: task.status == 'Completed'
+                                      ? Colors.grey
+                                      : Colors.black87,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getPriorityColor(task.priority),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: _getPriorityTextColor(task.priority),
+                                ),
+                              ),
+                              child: Text(
+                                task.priority,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: _getPriorityTextColor(task.priority),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          task.description,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today,
+                              size: 16,
+                              color: Colors.grey[600],
+                            ),
                             const SizedBox(width: 4),
                             Text(
-                              DateFormat('yyyy-MM-dd').format(task.dueDate),
-                              style: const TextStyle(fontSize: 12),
+                              DateFormat('MMM dd, yyyy').format(task.dueDate),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Icon(
+                              Icons.access_time,
+                              size: 16,
+                              color: Colors.grey[600],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              DateFormat('HH:mm').format(task.dueDate),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
                             ),
                             const Spacer(),
+                            if (task.status != 'Completed')
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.check_circle_outline,
+                                  color: Colors.green,
+                                ),
+                                onPressed: () async {
+                                  final completedTask = TaskModel(
+                                    id: task.id,
+                                    userId: task.userId,
+                                    title: task.title,
+                                    description: task.description,
+                                    dueDate: task.dueDate,
+                                    priority: task.priority,
+                                    status: 'Completed',
+                                    createdAt: task.createdAt,
+                                    updatedAt: DateTime.now(),
+                                  );
+                                  await taskDatabase.updateTask(completedTask);
+                                  setState(() {});
+                                },
+                              )
+                            else
+                              const Icon(
+                                Icons.check_circle,
+                                color: Colors.green,
+                              ),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
@@ -458,17 +589,29 @@ class _TaskPageState extends State<TaskPage> {
                               ),
                               decoration: BoxDecoration(
                                 color: task.status == 'Completed'
-                                    ? Colors.green
+                                    ? Colors.green.withOpacity(0.1)
                                     : task.status == 'Not Completed'
-                                        ? Colors.red
-                                        : Colors.orange,
-                                borderRadius: BorderRadius.circular(12),
+                                        ? Colors.red.withOpacity(0.1)
+                                        : Colors.orange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: task.status == 'Completed'
+                                      ? Colors.green
+                                      : task.status == 'Not Completed'
+                                          ? Colors.red
+                                          : Colors.orange,
+                                ),
                               ),
                               child: Text(
                                 task.status,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
                                   fontSize: 12,
+                                  color: task.status == 'Completed'
+                                      ? Colors.green
+                                      : task.status == 'Not Completed'
+                                          ? Colors.red
+                                          : Colors.orange,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ),
@@ -476,26 +619,6 @@ class _TaskPageState extends State<TaskPage> {
                         ),
                       ],
                     ),
-                    trailing: task.status != 'Completed'
-                        ? IconButton(
-                            icon: const Icon(Icons.check_circle_outline),
-                            onPressed: () async {
-                              final completedTask = TaskModel(
-                                id: task.id,
-                                userId: task.userId,
-                                title: task.title,
-                                description: task.description,
-                                dueDate: task.dueDate,
-                                priority: task.priority,
-                                status: 'Completed',
-                                createdAt: task.createdAt,
-                                updatedAt: DateTime.now(),
-                              );
-                              await taskDatabase.updateTask(completedTask);
-                              setState(() {});
-                            },
-                          )
-                        : const Icon(Icons.check_circle, color: Colors.green),
                   ),
                 ),
               );
